@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+// Enum Definitions
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ConsumptionStatus {
+  DNF
+  CONSUMING
+  FINISHED
+  RECONSUMING
+  RECONSUMED
+  RECONSUMPTION_DNF
+}
+
+model User {
+  id               String                @id @default(uuid()) @map("user_id")
+  status           UserStatus            @default(ACTIVE) @map("user_status")
+  createdAt        DateTime              @default(now()) @map("created_at")
+  isActive         Boolean               @default(true) @map("is_active")
+
+  // Virtual Relation Fields
+  reflections           Reflection[]
+  reflectionDisplays    ReflectionDisplay[]
+  templates             Template[]
+  displayLegends        DisplayLegend[]
+  branches              Branch[]
+
+  @@map("users")
+}
+
+model Branch {
+  id                 String                @id @default(uuid()) @map("branch_id")
+  isActive           Boolean               @default(true) @map("is_active")
+  name               String?
+
+  // Relations
+  userId           String                @map("user")
+  user             User                  @relation(fields: [userId], references: [id])
+
+  parentBranchId   String?               @map("parent_branch")
+  parentBranch     Branch?               @relation("SubBranches", fields: [parentBranchId], references: [id])
+
+  // Virtual Relation Fields
+  displays         ReflectionDisplay[]
+  subBranches      Branch[]              @relation("SubBranches")
+
+  @@map("branches")
+}
+
+model DisplayLegend {
+  id                 String                @id @default(uuid()) @map("display_legend_id")
+  isActive           Boolean               @default(true) @map("is_active")
+  theme              String
+  icon               String
+
+  // Relations
+  userId           String                @map("user")
+  user             User                  @relation(fields: [userId], references: [id])
+
+  // Virtual Relation Fields
+  displays         ReflectionDisplay[]
+
+  @@map("display_legends")
+}
+
+model Template {
+  id                 String                @id @default(uuid()) @map("template_id")
+  isActive           Boolean               @default(true) @map("is_active")
+  templateName       String                @map("template_name")
+  templateBody       String                @db.Text @map("template_body")
+
+  // Relations
+  userId           String                @map("user")
+  user             User                  @relation(fields: [userId], references: [id])
+
+  @@map("templates")
+}
+
+model ReflectionDisplay {
+  id                 String              @id @default(uuid()) @map("reflection_display_id")
+
+  // Relations
+  userId           String                @map("user")
+  user             User                  @relation(fields: [userId], references: [id])
+
+  legendId         String                @map("display_legend")
+  legend           DisplayLegend         @relation(fields: [legendId], references: [id])
+
+  parentBranchId   String                @map("parent_branch")
+  parentBranch     Branch                @relation(fields: [parentBranchId], references: [id])
+
+  // Virtual Relation Fields
+  reflections      Reflection[]
+
+  @@map("reflection_displays")
+}
+
+
+model Reflection {
+  id                 String                @id @default(uuid()) @map("reflection_id")
+  consumptionStatus  ConsumptionStatus     @default(CONSUMING) @map("consumption_status")
+  startedConsuming   DateTime?             @map("started_consuming")
+  finishedConsuming  DateTime?             @map("finished_consuming")
+  isActive           Boolean               @default(true) @map("is_active")
+  content            String?               @db.Text
+  metadata           Json?
+  updatedAt          DateTime              @updatedAt @map("updated_at")
+
+  // Relations
+  userId           String                @map("user")
+  user             User                  @relation(fields: [userId], references: [id])
+
+  displayId        String                @map("reflection_display")
+  display          ReflectionDisplay     @relation(fields: [displayId], references: [id])
+
+  @@map("reflections")
+}
+
